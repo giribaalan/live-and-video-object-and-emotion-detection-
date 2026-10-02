@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VISION AI PRO - Advanced Multi-Modal Surveillance & Affect Analytics</title>
+    <!-- Google Fonts & FontAwesome Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js for High-End Surveillance Charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Top Glass Header -->
+        <header class="app-header">
+            <div class="brand">
+                <div class="brand-icon">
+                    <i class="fa-solid fa-eye animate-pulse"></i>
+                </div>
+                <div class="brand-text">
+                    <h1>VISION<span>AI</span> PRO</h1>
+                    <p>Live Camera Motion, Emotion & Object State Engine</p>
+                </div>
+            </div>
+
+            <div class="header-status">
+                <div class="status-badge connected" id="headerCameraStatusBadge">
+                    <span class="pulse-dot" id="headerCameraStatusDot"></span> CAMERA ONLINE
+                </div>
+                <div class="status-badge fps" id="headerFpsBadge">
+                    <i class="fa-solid fa-bolt"></i> Pipeline: <span id="valFps">0.0</span> FPS | Cap: <span id="valCapFps">0.0</span> FPS
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <button class="btn btn-secondary" id="btnRecordToggle">
+                    <i class="fa-solid fa-circle" style="color: #ff5252;" id="recIcon"></i> 
+                    <span id="recText">Start Record</span>
+                </button>
+                <button class="btn btn-primary" id="btnSnapshot">
+                    <i class="fa-solid fa-camera"></i> Snapshot
+                </button>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs Menu -->
+        <nav class="app-nav">
+            <button class="nav-tab active" data-tab="dashboard">
+                <i class="fa-solid fa-chart-pie"></i> Real-time Dashboard
+            </button>
+            <button class="nav-tab" data-tab="analytics">
+                <i class="fa-solid fa-chart-line"></i> Analytics Charts
+            </button>
+            <button class="nav-tab" data-tab="history">
+                <i class="fa-solid fa-clock-rotate-left"></i> Surveillance Registry
+            </button>
+            <button class="nav-tab" data-tab="gallery">
+                <i class="fa-solid fa-photo-film"></i> Media Library
+            </button>
+            <button class="nav-tab" data-tab="settings">
+                <i class="fa-solid fa-sliders"></i> System Config
+            </button>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+
+            <!-- TAB 1: DASHBOARD -->
+            <div class="tab-panel active" id="panel-dashboard">
+                <div class="dashboard-grid">
+                    <!-- Left Stream Viewport -->
+                    <section class="viewport-card">
+                        <div class="card-header">
+                            <h2><i class="fa-solid fa-video"></i> Surveillance Viewport</h2>
+                            <div class="card-controls">
+                                <button class="btn btn-primary" id="btnStartLive">
+                                    <i class="fa-solid fa-play"></i> Start Live Detection
+                                </button>
+                                <button class="btn btn-danger" id="btnStopDetection" disabled>
+                                    <i class="fa-solid fa-stop"></i> Cancel Detection
+                                </button>
+                                <button class="btn-zone-draw btn btn-secondary" id="btnDrawZone">
+                                    <i class="fa-solid fa-pencil"></i> Draw Restricted Zone
+                                </button>
+                                <button class="icon-btn" id="btnFullscreen" title="Toggle Fullscreen">
+                                    <i class="fa-solid fa-expand"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="video-container" id="videoWrapper">
+                            <img data-feed-url="{{ url_for('video_feed') }}" alt="Detection is stopped" id="videoFeed">
+                            <canvas id="drawingCanvas" class="drawing-canvas"></canvas>
+                            <div class="stream-overlay-badge" id="streamBadge">YOLOv8 + MOG2 Background Subtractor Active</div>
+                            <div class="recording-indicator hidden" id="recIndicator">
+                                <span class="dot"></span> REC <span id="recTimer">00:00</span>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Right Key Metrics Panel -->
+                    <section class="metrics-panel">
+                        <!-- Stat Widget 1: Objects -->
+                        <div class="metric-card">
+                            <div class="metric-icon blue">
+                                <i class="fa-solid fa-cubes"></i>
+                            </div>
+                            <div class="metric-info">
+                                <span class="label">Tracked Objects</span>
+                                <h3 id="statObjectsCount">0</h3>
+                                <span class="subtext" id="statObjectsSub">Total processed: 0</span>
+                            </div>
+                        </div>
+
+                        <!-- Stat Widget 2: Motion Index -->
+                        <div class="metric-card">
+                            <div class="metric-icon green">
+                                <i class="fa-solid fa-gauge-high"></i>
+                            </div>
+                            <div class="metric-info">
+                                <span class="label">Motion Index</span>
+                                <h3 id="statMotionIndex">0.0%</h3>
+                                <div class="progress-bar-bg">
+                                    <div class="progress-bar-fill" id="progressMotion" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Stat Widget 3: Dominant Emotion & Affect Radar -->
+                        <div class="metric-card affect-card">
+                            <div class="metric-icon purple">
+                                <i class="fa-solid fa-face-smile"></i>
+                            </div>
+                            <div class="metric-info">
+                                <span class="label">Dominant Emotion Engine</span>
+                                <h3 id="statDominantEmotion">Neutral</h3>
+                                
+                                <div class="affect-metrics">
+                                    <div class="affect-row">
+                                        <span>Valence: <strong id="valValence">+0.00</strong></span>
+                                        <span>Arousal: <strong id="valArousal">0.10</strong></span>
+                                    </div>
+                                    <div class="progress-bar-bg">
+                                        <div class="progress-bar-fill valence-fill" id="progressValence" style="width: 50%"></div>
+                                    </div>
+                                    <div class="affect-tags" id="affectAuTags">
+                                        <span class="au-tag">YuNet Neural Active</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Control Panel Card -->
+                        <div class="controls-card">
+                            <h3><i class="fa-solid fa-sliders"></i> Parameters Quick HUD</h3>
+                            
+                            <div class="control-group">
+                                <label>YOLO Conf Threshold: <span id="valConf">0.35</span></label>
+                                <input type="range" id="sliderConf" min="0.1" max="0.9" step="0.05" value="0.35">
+                            </div>
+
+                            <div class="toggle-grid">
+                                <label class="toggle-item">
+                                    <input type="checkbox" id="chkBoxes" checked>
+                                    <span class="toggle-slider"></span>
+                                    <span class="toggle-label">Bounding Boxes</span>
+                                </label>
+
+                                <label class="toggle-item">
+                                    <input type="checkbox" id="chkTrails" checked>
+                                    <span class="toggle-slider"></span>
+                                    <span class="toggle-label">Motion Trails</span>
+                                </label>
+
+                                <label class="toggle-item">
+                                    <input type="checkbox" id="chkEmotions" checked>
+                                    <span class="toggle-slider"></span>
+                                    <span class="toggle-label">Face Emotion</span>
+                                </label>
+
+                                <label class="toggle-item">
+                                    <input type="checkbox" id="chkHeatmap">
+                                    <span class="toggle-slider"></span>
+                                    <span class="toggle-label">Motion Heatmap</span>
+                                </label>
+
+                                <label class="toggle-item">
+                                    <input type="checkbox" id="chkSoundAlert" checked>
+                                    <span class="toggle-slider"></span>
+                                    <span class="toggle-label">Intrusion Beep Alerts</span>
+                                </label>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Bottom Objects Register & Event Log -->
+                    <section class="bottom-section">
+                        <!-- Objects Register -->
+                        <div class="objects-table-card">
+                            <div class="card-header">
+                                <h2><i class="fa-solid fa-list-check"></i> Scene Objects Register</h2>
+                            </div>
+                            <div class="table-wrapper">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Object Type</th>
+                                            <th>Motion State</th>
+                                            <th>Speed (px/frame)</th>
+                                            <th>Direction</th>
+                                            <th>Facial Affect</th>
+                                            <th>Conf</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="objectsTableBody">
+                                        <tr>
+                                            <td colspan="7" class="text-center empty-msg">Waiting for objects in live stream...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Live Events log -->
+                        <div class="events-log-card">
+                            <div class="card-header">
+                                <h2><i class="fa-solid fa-bell"></i> Live Activity & Alert Log</h2>
+                                <button class="btn btn-secondary" id="btnExportCsv" style="padding: 0.35rem 0.75rem; font-size: 0.75rem;">
+                                    <i class="fa-solid fa-file-csv"></i> Export CSV
+                                </button>
+                            </div>
+                            <div class="events-log-container" id="eventsLogContainer">
+                                <div class="event-item system">
+                                    <span class="time">[System]</span>
+                                    <span class="msg">Vision Detector Pipeline initialized and active.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <!-- TAB 2: ANALYTICS CHARTS -->
+            <div class="tab-panel" id="panel-analytics">
+                <div class="analytics-grid">
+                    <!-- Chart 1: Motion Index over time -->
+                    <div class="chart-card">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-chart-line"></i> Motion Intensity Index (%)</h3>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="chartMotion"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Chart 2: Object count timeline -->
+                    <div class="chart-card">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-chart-bar"></i> Tracked Objects In Scene</h3>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="chartObjects"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Chart 3: Emotion Distribution -->
+                    <div class="chart-card">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-chart-pie"></i> Affect Emotion Distribution</h3>
+                        </div>
+                        <div class="chart-container pie-container">
+                            <canvas id="chartEmotions"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Chart 4: Processing Rate -->
+                    <div class="chart-card">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-gauge-high"></i> System Processing Latency (FPS)</h3>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="chartFps"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: SURVEILLANCE HISTORY REGISTRY -->
+            <div class="tab-panel" id="panel-history">
+                <div class="history-card">
+                    <div class="card-header history-header">
+                        <h2><i class="fa-solid fa-book-open"></i> Surveillance Tracking Register</h2>
+                        <div class="history-controls">
+                            <input type="text" id="inputHistorySearch" placeholder="Search by type, emotion, id...">
+                            <span class="total-records-count">Total Rows: <span id="spanTotalRecords">0</span></span>
+                        </div>
+                    </div>
+                    <div class="table-wrapper history-table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Class Type</th>
+                                    <th>Start Time</th>
+                                    <th>End Time</th>
+                                    <th>Duration (s)</th>
+                                    <th>Max Speed</th>
+                                    <th>Avg Speed</th>
+                                    <th>Final Dir</th>
+                                    <th>Dominant State</th>
+                                    <th>Dominant Emotion</th>
+                                    <th>Avg Valence</th>
+                                    <th>Avg Arousal</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTableBody">
+                                <tr>
+                                    <td colspan="12" class="text-center">No historical logs retrieved.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="pagination-container">
+                        <button class="btn btn-secondary" id="btnHistoryPrev"><i class="fa-solid fa-chevron-left"></i> Prev</button>
+                        <span class="pagination-info">Page <span id="spanCurrentPage">1</span> of <span id="spanTotalPages">1</span></span>
+                        <button class="btn btn-secondary" id="btnHistoryNext">Next <i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 4: MEDIA LIBRARY -->
+            <div class="tab-panel" id="panel-gallery">
+                <div class="gallery-card">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-images"></i> Snapshots & Video Recording Gallery</h2>
+                        <div class="gallery-filters">
+                            <button class="gallery-filter-btn active" data-filter="all">All Assets</button>
+                            <button class="gallery-filter-btn" data-filter="snapshot">Snapshots</button>
+                            <button class="gallery-filter-btn" data-filter="recording">Recordings</button>
+                        </div>
+                    </div>
+                    <div class="gallery-grid" id="galleryGrid">
+                        <!-- Dynamic Media Items Go Here -->
+                        <div class="no-media-msg">No media files captured yet.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 5: SYSTEM CONFIGURATION -->
+            <div class="tab-panel" id="panel-settings">
+                <div class="settings-grid">
+                    <!-- Card 1: Camera Input Settings -->
+                    <div class="settings-card">
+                        <h3><i class="fa-solid fa-camera"></i> Camera Input & Source Settings</h3>
+                        <div class="settings-form">
+                            <div class="form-group">
+                                <label for="inputCameraSource">Video Source Index / RTSP URL / Video Path:</label>
+                                <div class="input-inline">
+                                    <input type="text" id="inputCameraSource" placeholder="0 or path/to/video.mp4">
+                                    <button class="btn btn-primary" id="btnChangeSource">Apply Source</button>
+                                </div>
+                                <span class="help-text">Enter a camera index (e.g. 0, 1), an RTSP Stream path, or a video file loop path.</span>
+                            </div>
+                            <div class="info-row">
+                                <span>Active Camera Source:</span>
+                                <strong id="lblActiveSource">0</strong>
+                            </div>
+                            <div class="form-group" style="margin-top: 1rem;">
+                                <label for="selectCameraResolution">Capture Resolution:</label>
+                                <select id="selectCameraResolution" class="form-control">
+                                    <option value="640x480">640 x 480 (Default SD)</option>
+                                    <option value="1280x720">1280 x 720 (HD 720p)</option>
+                                    <option value="1920x1080">1920 x 1080 (Full HD 1080p)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="selectCameraFps">Target Capture FPS:</label>
+                                <select id="selectCameraFps" class="form-control">
+                                    <option value="15">15 FPS (Resource Saving)</option>
+                                    <option value="30">30 FPS (Standard Smooth)</option>
+                                    <option value="60">60 FPS (High Frame Rate)</option>
+                                </select>
+                            </div>
+                            <div style="margin-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 1rem;">
+                                <h4><i class="fa-solid fa-sliders"></i> Hardware Controls (Webcam Only)</h4>
+                                <div class="form-group" style="margin-top: 0.5rem;">
+                                    <label class="toggle-item">
+                                        <input type="checkbox" id="chkCameraAutoExposure">
+                                        <span class="toggle-slider"></span>
+                                        <span class="toggle-label">Auto Exposure</span>
+                                    </label>
+                                </div>
+                                <div class="control-group">
+                                    <label>Exposure: <span id="valCameraExposure">Default</span></label>
+                                    <input type="range" id="sliderCameraExposure" min="-1" max="100" step="1" value="-1">
+                                </div>
+                                <div class="control-group">
+                                    <label>Brightness: <span id="valCameraBrightness">Default</span></label>
+                                    <input type="range" id="sliderCameraBrightness" min="-1" max="100" step="1" value="-1">
+                                </div>
+                                <div class="control-group">
+                                    <label>Contrast: <span id="valCameraContrast">Default</span></label>
+                                    <input type="range" id="sliderCameraContrast" min="-1" max="100" step="1" value="-1">
+                                </div>
+                                <div class="control-group">
+                                    <label>Saturation: <span id="valCameraSaturation">Default</span></label>
+                                    <input type="range" id="sliderCameraSaturation" min="-1" max="100" step="1" value="-1">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-card">
+                        <h3><i class="fa-solid fa-file-arrow-up"></i> Upload Detection Media</h3>
+                        <div class="settings-form">
+                            <div class="form-group">
+                                <label for="inputDetectionImage">Image: detect objects, people, and animals</label>
+                                <input id="inputDetectionImage" type="file" accept="image/jpeg,image/png,image/bmp,image/webp" class="form-control">
+                                <button class="btn btn-secondary btn-full-width" id="btnUploadImage" style="margin-top: .7rem;">Analyze Uploaded Image</button>
+                            </div>
+                            <div class="form-group">
+                                <label for="inputDetectionVideo">Video: use as the live detection source</label>
+                                <input id="inputDetectionVideo" type="file" accept="video/mp4,video/x-msvideo,video/quicktime,video/x-matroska,video/webm" class="form-control">
+                                <button class="btn btn-primary btn-full-width" id="btnUploadVideo" style="margin-top: .7rem;">Upload & Start Video Detection</button>
+                                <button class="btn btn-danger btn-full-width" id="btnCancelVideoDetection" style="margin-top: .7rem;" disabled>Cancel Current Detection</button>
+                            </div>
+                            <span class="help-text">For custom classes such as power bank or mosquito, upload labelled examples and train a custom YOLO model.</span>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: YOLO Model Settings -->
+                    <div class="settings-card">
+                        <h3><i class="fa-solid fa-brain"></i> Neural Network (YOLOv8) Model</h3>
+                        <div class="settings-form">
+                            <div class="form-group">
+                                <label for="selectYoloModel">Active YOLO Model Weights:</label>
+                                <select id="selectYoloModel" class="form-control">
+                                    <option value="yolov8n.pt">YOLOv8 Nano (Fastest, Lightweight)</option>
+                                    <option value="yolov8s.pt">YOLOv8 Small (High accuracy, Medium load)</option>
+                                </select>
+                                <span class="help-text">Switching models might cause a 1-3 seconds freeze in the live feed.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 3: Motion Detector Settings -->
+                    <div class="settings-card">
+                        <h3><i class="fa-solid fa-wave-square"></i> Background Subtractor MOG2 Motion</h3>
+                        <div class="settings-form">
+                            <div class="form-group">
+                                <label for="numMotionHistory">MOG2 Background History Frames:</label>
+                                <input type="number" id="numMotionHistory" min="50" max="2000" step="50" value="500" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label for="numMotionThreshold">MOG2 Variance Threshold:</label>
+                                <input type="number" id="numMotionThreshold" min="5" max="100" step="2" value="25" class="form-control">
+                                <span class="help-text">Lower values detect more subtle motion, higher values reduce noise.</span>
+                            </div>
+                            <div class="form-group">
+                                <label for="numMinContourArea">Min Contour Area (px²):</label>
+                                <input type="number" id="numMinContourArea" min="100" max="10000" step="100" value="800" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 4: Webhook Alerts Settings -->
+                    <div class="settings-card">
+                        <h3><i class="fa-solid fa-share-nodes"></i> Webhook Event Notifications</h3>
+                        <div class="settings-form">
+                            <div class="form-group">
+                                <label for="txtWebhookUrl">HTTP Post Webhook Endpoint URL:</label>
+                                <input type="url" id="txtWebhookUrl" placeholder="http://my-server.com/alerts" class="form-control">
+                                <span class="help-text">Backend dispatches events asynchronously to this URL. Leave empty to disable.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 5: Intrusion Region Configuration -->
+                    <div class="settings-card">
+                        <h3><i class="fa-solid fa-draw-polygon"></i> Restricted Intrusion Zone</h3>
+                        <div class="settings-form">
+                            <label class="toggle-item" style="margin-bottom: 1rem;">
+                                <input type="checkbox" id="chkIntrusionZoneEnabled">
+                                <span class="toggle-slider"></span>
+                                <span class="toggle-label" style="font-weight: 600;">Enable Intrusion Region Detection</span>
+                            </label>
+                            
+                            <div class="info-row">
+                                <span>Configured Zone Coordinates:</span>
+                                <span id="lblZoneCoords" class="coord-label">None</span>
+                            </div>
+                            <button class="btn btn-secondary btn-full-width" id="btnClearZone" style="margin-top: 1rem;">
+                                <i class="fa-solid fa-trash-can"></i> Clear Bounding Zone
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Card 6: Audio Tones Config -->
+                    <div class="settings-card">
+                        <h3><i class="fa-solid fa-volume-high"></i> Alert Tone Synthesizer</h3>
+                        <div class="settings-form">
+                            <div class="form-group">
+                                <label for="numToneFreq">Beep Alarm Tone Frequency (Hz):</label>
+                                <input type="number" id="numToneFreq" min="200" max="2500" step="50" value="880" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label for="selectToneType">Tonality Wave Type:</label>
+                                <select id="selectToneType" class="form-control">
+                                    <option value="sine">Sine (Smooth)</option>
+                                    <option value="triangle">Triangle (Muted buzzer)</option>
+                                    <option value="square">Square (Retro Arcade Alarm)</option>
+                                    <option value="sawtooth">Sawtooth (Loud Siren)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-actions-footer">
+                    <button class="btn btn-primary" id="btnSaveAllSettings">
+                        <i class="fa-solid fa-save"></i> Save System Config
+                    </button>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <p>Advanced Vision Engine v3.0 | Multi-Modal Emotion, Motion & Intrusion Analytics Dashboard</p>
+        </footer>
+    </div>
+
+    <!-- Media Player Overlay Modal -->
+    <div class="modal-overlay" id="mediaModal">
+        <div class="modal-content">
+            <button class="modal-close" id="btnModalClose">&times;</button>
+            <div id="modalMediaContainer"></div>
+        </div>
+    </div>
+
+    <!-- Notification Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

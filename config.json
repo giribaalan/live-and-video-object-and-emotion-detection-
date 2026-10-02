@@ -1,0 +1,8 @@
+{
+    "conf_threshold": 0.35,
+    "show_boxes": true,
+    "show_motion_trails": true,
+    "show_emotions": true,
+    "show_heatmap": false,
+    "camera_source": 0
+}

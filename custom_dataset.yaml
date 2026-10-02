@@ -1,0 +1,19 @@
+# Put labelled images in this standard YOLO layout before training:
+# dataset/images/train, dataset/images/val, dataset/labels/train, dataset/labels/val
+path: dataset
+train: images/train
+val: images/val
+names:
+  0: mouse
+  1: powerbank
+  2: fan
+  3: mosquito
+  4: bat
+  5: fruit
+  6: vegetable
+  7: cup
+  8: glass
+  9: smartboard
+  10: tree
+  11: person
+  12: animal

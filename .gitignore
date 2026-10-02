@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Generated data and user uploads are ephemeral on a Render web service.
+snapshots/
+static/snapshots/
+static/recordings/
+static/uploads/
+surveillance_records.csv
+
+# A local camera path should not be deployed.
+config.json
